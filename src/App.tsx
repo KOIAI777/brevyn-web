@@ -1,7 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { LanyardContact } from "./components/LanyardContact";
+import PixelBlast from "./components/PixelBlast/PixelBlast";
 import "./styles.css";
 
 const releaseUrl = "https://github.com/KOIAI777/brevyn-desktop/releases/latest";
+type ContactAnchor = { x: number; y: number };
+type HeroPixelFieldProps = {
+  paused?: boolean;
+};
 
 const navLinks = [
   { href: "#product", label: "产品" },
@@ -113,128 +119,80 @@ function DownloadButton() {
   );
 }
 
-function useAmbientField(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!canvas || reduced) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const field = canvas;
-    const context = ctx;
-
-    let width = 0;
-    let height = 0;
-    let dpr = 1;
-    let frame = 0;
-    let animation = 0;
-    let points: Array<{ x: number; y: number; vx: number; vy: number; r: number; phase: number; warm: boolean }> = [];
-
-    function resize() {
-      const rect = field.getBoundingClientRect();
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      width = Math.max(1, rect.width);
-      height = Math.max(1, rect.height);
-      field.width = Math.floor(width * dpr);
-      field.height = Math.floor(height * dpr);
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      const count = Math.round(Math.min(58, Math.max(28, width / 34)));
-      points = Array.from({ length: count }, (_, i) => ({
-        x: (i * 97) % width,
-        y: (i * 151) % height,
-        vx: Math.sin(i * 1.7) * 0.16 + 0.025,
-        vy: Math.cos(i * 1.3) * 0.12 + 0.014,
-        r: 0.48 + ((i * 7) % 10) / 18,
-        phase: i * 0.43,
-        warm: i % 3 === 0,
-      }));
-    }
-
-    function draw() {
-      frame += 1;
-      context.clearRect(0, 0, width, height);
-
-      const time = frame / 60;
-      context.save();
-      context.lineCap = "round";
-      for (let i = 0; i < 4; i += 1) {
-        const y = height * (0.1 + i * 0.13) + Math.sin(time * 0.55 + i) * 18;
-        const drift = Math.sin(time * 0.38 + i * 1.7) * 42;
-        const cord = context.createLinearGradient(0, y, width, y + 120);
-        cord.addColorStop(0, "rgba(255, 241, 205, 0)");
-        cord.addColorStop(0.35, i % 2 ? "rgba(255, 255, 255, 0.22)" : "rgba(221, 194, 145, 0.14)");
-        cord.addColorStop(0.7, "rgba(255, 255, 255, 0.12)");
-        cord.addColorStop(1, "rgba(255, 241, 205, 0)");
-        context.strokeStyle = cord;
-        context.lineWidth = i === 0 ? 1.4 : 0.9;
-        context.beginPath();
-        context.moveTo(-80, y + drift);
-        context.bezierCurveTo(width * 0.24, y - 84, width * 0.48, y + 110, width + 80, y - 24 - drift);
-        context.stroke();
-      }
-      context.restore();
-
-      const scanY = (frame * 0.42) % height;
-      const scan = context.createLinearGradient(0, scanY - 90, 0, scanY + 90);
-      scan.addColorStop(0, "rgba(255,220,139,0)");
-      scan.addColorStop(0.5, "rgba(221,194,145,0.026)");
-      scan.addColorStop(1, "rgba(255,220,139,0)");
-      context.fillStyle = scan;
-      context.fillRect(0, scanY - 90, width, 180);
-
-      for (let i = 0; i < points.length; i += 1) {
-        const p = points[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x > width + 20) p.x = -20;
-        if (p.y > height + 20) p.y = -20;
-        const px = p.x + Math.sin(time + p.phase) * 7;
-        const py = p.y + Math.cos(time * 0.8 + p.phase) * 5;
-
-        for (let j = i + 1; j < points.length; j += 1) {
-          const q = points[j];
-          const qx = q.x + Math.sin(time + q.phase) * 7;
-          const qy = q.y + Math.cos(time * 0.8 + q.phase) * 5;
-          const dx = px - qx;
-          const dy = py - qy;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 104) {
-            const alpha = (1 - dist / 104) * 0.026;
-            context.strokeStyle = `rgba(118, 92, 50, ${alpha})`;
-            context.lineWidth = 1;
-            context.beginPath();
-            context.moveTo(px, py);
-            context.lineTo(qx, qy);
-            context.stroke();
-          }
-        }
-
-        context.fillStyle = p.warm ? "rgba(189, 133, 37, 0.22)" : "rgba(255, 255, 255, 0.38)";
-        context.beginPath();
-        context.arc(px, py, p.r, 0, Math.PI * 2);
-        context.fill();
-      }
-
-      animation = requestAnimationFrame(draw);
-    }
-
-    resize();
-    draw();
-    window.addEventListener("resize", resize, { passive: true });
-
-    return () => {
-      cancelAnimationFrame(animation);
-      window.removeEventListener("resize", resize);
-    };
-  }, [canvasRef]);
+function MailIcon() {
+  return (
+    <svg className="mail-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4.75 6.75h14.5v10.5H4.75V6.75Z" />
+      <path d="m5.25 7.25 6.75 5.5 6.75-5.5" />
+    </svg>
+  );
 }
 
-function Header() {
+function HeroPixelField({ paused = false }: HeroPixelFieldProps) {
+  return (
+    <div className={`hero-pixel-field${paused ? " is-paused" : ""}`} aria-hidden="true">
+      <PixelBlast
+        variant="square"
+        color="#d18a5b"
+        pixelSize={2}
+        patternScale={4}
+        patternDensity={1.45}
+        pixelSizeJitter={1.3}
+        speed={paused ? 0 : 1.5}
+        edgeFade={0.25}
+        enableRipples
+        rippleSpeed={0.3}
+        rippleThickness={0.1}
+        rippleIntensityScale={1}
+        transparent
+        autoPauseOffscreen
+        globalPointer
+      />
+    </div>
+  );
+}
+
+function Header({ contactOpen, setContactOpen }: { contactOpen: boolean; setContactOpen: React.Dispatch<React.SetStateAction<boolean>> }) {
+  const [contactMounted, setContactMounted] = useState(false);
+  const [contactAnchor, setContactAnchor] = useState<ContactAnchor | null>(null);
+  const navInnerRef = useRef<HTMLDivElement | null>(null);
+  const contactButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const updateContactAnchor = () => {
+    const buttonRect = contactButtonRef.current?.getBoundingClientRect();
+    const navRect = navInnerRef.current?.getBoundingClientRect();
+    if (!buttonRect) return;
+    setContactAnchor({
+      x: buttonRect.left + buttonRect.width / 2,
+      y: navRect ? navRect.bottom + 2 : buttonRect.bottom + 2,
+    });
+  };
+
+  useEffect(() => {
+    updateContactAnchor();
+    const timer = window.setTimeout(() => setContactMounted(true), 700);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!contactOpen) return;
+    updateContactAnchor();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setContactOpen(false);
+    };
+
+    window.addEventListener("resize", updateContactAnchor);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("resize", updateContactAnchor);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [contactOpen]);
+
   return (
     <header className="nav">
-      <div className="nav-inner">
+      <div className="nav-inner" ref={navInnerRef}>
         <a className="brand" href="#top" aria-label="Brevyn 首页">
           <img src="/assets/generated/brevyn-app-icon.png" alt="" />
           <span className="brand-mark">
@@ -250,12 +208,25 @@ function Header() {
           ))}
         </nav>
         <div className="nav-actions">
-          <a className="button ghost" href="#download">
-            抢先体验
-          </a>
-          <a className="button primary" href={releaseUrl} target="_blank" rel="noopener noreferrer">
-            下载
-          </a>
+          <button
+            ref={contactButtonRef}
+            className="button ghost contact-toggle icon-button"
+            type="button"
+            aria-label={contactOpen ? "收起联系牌" : "打开联系牌"}
+            aria-expanded={contactOpen}
+            aria-controls="contact-lanyard"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (!contactOpen) {
+                updateContactAnchor();
+                setContactMounted(true);
+              }
+              setContactOpen((open) => !open);
+            }}
+          >
+            <MailIcon />
+          </button>
           <details className="nav-menu">
             <summary className="button button-menu nav-menu-button" aria-label="打开导航菜单">
               <span className="nav-menu-icon" aria-hidden="true">
@@ -274,20 +245,26 @@ function Header() {
           </details>
         </div>
       </div>
+      {contactMounted ? (
+        <div className={`contact-lanyard-layer${contactOpen ? " is-open" : ""}`} id="contact-lanyard" aria-hidden={!contactOpen}>
+          <LanyardContact active={contactOpen} anchor={contactAnchor} />
+        </div>
+      ) : null}
     </header>
   );
 }
 
-function Hero() {
+function Hero({ pixelPaused = false }: { pixelPaused?: boolean }) {
   return (
     <section className="hero" aria-labelledby="hero-title">
+      <HeroPixelField paused={pixelPaused} />
       <div className="hero-inner">
-        <a className="release" href="#product">
-          本地优先课程工作台
-        </a>
+        <div className="hero-app-icon" aria-hidden="true">
+          <img src="/assets/generated/brevyn-app-icon.png" alt="" />
+        </div>
         <h1 id="hero-title">Brevyn</h1>
         <p className="hero-copy">
-          面向课程资料管理、RAG 检索和作业任务的本地优先 AI 学习工作台。把学期、课程文件、作业要求和 AI Agent 放进同一个桌面应用。
+          面向课程资料管理、RAG 检索和作业任务的本地优先 AI 学习工作台。
         </p>
         <div className="hero-actions">
           <DownloadButton />
@@ -462,17 +439,13 @@ function Footer() {
 }
 
 export default function App() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  useAmbientField(canvasRef);
+  const [contactOpen, setContactOpen] = useState(false);
 
   return (
     <div className="page">
-      <div className="ambient" aria-hidden="true">
-        <canvas ref={canvasRef} id="field" />
-      </div>
-      <Header />
+      <Header contactOpen={contactOpen} setContactOpen={setContactOpen} />
       <main id="top">
-        <Hero />
+        <Hero pixelPaused={contactOpen} />
         <ProductSection />
         <ContextSection />
         <TrustSection />
