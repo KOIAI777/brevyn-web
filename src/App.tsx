@@ -3,7 +3,7 @@ import { LanyardContact } from "./components/LanyardContact";
 import PixelBlast from "./components/PixelBlast/PixelBlast";
 import "./styles.css";
 
-const releaseUrl = "https://github.com/KOIAI777/brevyn-desktop/releases/latest";
+const releaseUrl = "https://github.com/KOIAI777/brevyn-releases/releases/latest";
 type ContactAnchor = { x: number; y: number };
 type HeroPixelFieldProps = {
   paused?: boolean;
