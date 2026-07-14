@@ -1,13 +1,87 @@
 import { useEffect, useRef, useState } from "react";
+import { Apple, Code2, Download, MonitorDown } from "lucide-react";
 import { LanyardContact } from "./components/LanyardContact";
 import PixelBlast from "./components/PixelBlast/PixelBlast";
 import "./styles.css";
 
-const releaseUrl = "https://github.com/KOIAI777/brevyn-releases/releases/latest";
+const officialReleaseUrl = "https://github.com/KOIAI777/brevyn-releases/releases/latest";
+const communityReleaseUrl = "https://github.com/KOIAI777/brevyn/releases/latest";
+const communitySourceUrl = "https://github.com/KOIAI777/brevyn";
+
+type Platform = "macos" | "windows";
+type ReleaseAsset = { name: string; size: number; url: string };
+type ReleaseManifest = {
+  edition: "official" | "community";
+  channel: "stable" | "prerelease";
+  tag: string;
+  generatedAt: string;
+  assets: ReleaseAsset[];
+};
+type ReleaseCatalog = {
+  official: ReleaseManifest | null;
+  community: ReleaseManifest | null;
+};
 type ContactAnchor = { x: number; y: number };
 type HeroPixelFieldProps = {
   paused?: boolean;
 };
+
+function isReleaseManifest(value: unknown): value is ReleaseManifest {
+  if (!value || typeof value !== "object") return false;
+  const manifest = value as Partial<ReleaseManifest>;
+  return typeof manifest.tag === "string" && Array.isArray(manifest.assets)
+    && manifest.assets.every((asset) => asset && typeof asset.name === "string" && typeof asset.size === "number" && typeof asset.url === "string");
+}
+
+async function fetchReleaseManifest(url: string, signal: AbortSignal): Promise<ReleaseManifest> {
+  const response = await fetch(url, { signal });
+  if (!response.ok) throw new Error(`Release manifest request failed: ${response.status}`);
+  const manifest: unknown = await response.json();
+  if (!isReleaseManifest(manifest)) throw new Error("Release manifest is invalid.");
+  return manifest;
+}
+
+function useReleaseCatalog(): ReleaseCatalog {
+  const [catalog, setCatalog] = useState<ReleaseCatalog>({ official: null, community: null });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void Promise.allSettled([
+      fetchReleaseManifest("/api/releases/official", controller.signal),
+      fetchReleaseManifest("/api/releases/community", controller.signal),
+    ]).then(([official, community]) => {
+      if (controller.signal.aborted) return;
+      setCatalog({
+        official: official.status === "fulfilled" ? official.value : null,
+        community: community.status === "fulfilled" ? community.value : null,
+      });
+    });
+    return () => controller.abort();
+  }, []);
+
+  return catalog;
+}
+
+function detectPlatform(): Platform {
+  return /windows|win32|win64/i.test(navigator.userAgent) ? "windows" : "macos";
+}
+
+function findInstaller(manifest: ReleaseManifest | null, platform: Platform): ReleaseAsset | null {
+  const suffix = platform === "macos" ? ".dmg" : ".exe";
+  return manifest?.assets.find((asset) => asset.name.toLowerCase().endsWith(suffix)) ?? null;
+}
+
+function formatFileSize(bytes: number): string {
+  return `${Math.round(bytes / 1_000_000)} MB`;
+}
+
+function platformLabel(platform: Platform): string {
+  return platform === "macos" ? "macOS" : "Windows";
+}
+
+function platformDetail(platform: Platform): string {
+  return platform === "macos" ? "Apple Silicon" : "Windows x64";
+}
 
 const navLinks = [
   { href: "#product", label: "产品" },
@@ -110,11 +184,17 @@ function GithubMark() {
   );
 }
 
-function DownloadButton() {
+function DownloadButton({ manifest, platform }: { manifest: ReleaseManifest | null; platform: Platform }) {
+  const installer = findInstaller(manifest, platform);
   return (
-    <a className="button primary download-cta" href={releaseUrl} target="_blank" rel="noopener noreferrer">
-      <GithubMark />
-      <span>下载 Mac / Windows 版本</span>
+    <a
+      className="button primary download-cta"
+      href={installer?.url ?? officialReleaseUrl}
+      target={installer ? undefined : "_blank"}
+      rel="noopener noreferrer"
+    >
+      <Download className="button-icon" aria-hidden="true" />
+      <span>下载 {platformLabel(platform)} 版</span>
     </a>
   );
 }
@@ -254,7 +334,15 @@ function Header({ contactOpen, setContactOpen }: { contactOpen: boolean; setCont
   );
 }
 
-function Hero({ pixelPaused = false }: { pixelPaused?: boolean }) {
+function Hero({
+  pixelPaused = false,
+  manifest,
+  platform,
+}: {
+  pixelPaused?: boolean;
+  manifest: ReleaseManifest | null;
+  platform: Platform;
+}) {
   return (
     <section className="hero" aria-labelledby="hero-title">
       <HeroPixelField paused={pixelPaused} />
@@ -267,10 +355,15 @@ function Hero({ pixelPaused = false }: { pixelPaused?: boolean }) {
           面向课程资料管理、RAG 检索和作业任务的本地优先 AI 学习工作台。
         </p>
         <div className="hero-actions">
-          <DownloadButton />
-          <a className="button" href="#product">
-            查看产品演示
+          <DownloadButton manifest={manifest} platform={platform} />
+          <a className="button" href="#download">
+            查看全部版本
           </a>
+        </div>
+        <div className="hero-release-meta" aria-live="polite">
+          <span>Brevyn Official</span>
+          <span>{manifest?.tag ?? "最新稳定版"}</span>
+          <span>{platformDetail(platform)}</span>
         </div>
         <div className="meta-row" aria-label="产品亮点">
           <span>本地优先桌面工作区</span>
@@ -405,19 +498,99 @@ function TrustSection() {
   );
 }
 
-function DownloadSection() {
+function PlatformSelector({ platform, onChange }: { platform: Platform; onChange: (platform: Platform) => void }) {
   return (
-    <section id="download">
-      <div className="content final">
-        <p className="section-kicker">下载</p>
-        <h2 className="section-title">从一门课开始。</h2>
-        <p className="section-text">从 GitHub Releases 获取最新桌面安装包，把课程文件、作业任务和 AI 助手放进一个桌面工作台。</p>
-        <div className="hero-actions">
-          <DownloadButton />
-          <a className="button" href="#top">
-            回到顶部
-          </a>
+    <div className="download-platform-switch" role="tablist" aria-label="选择下载平台">
+      <button type="button" role="tab" aria-selected={platform === "macos"} onClick={() => onChange("macos")}>
+        <Apple aria-hidden="true" />
+        macOS
+      </button>
+      <button type="button" role="tab" aria-selected={platform === "windows"} onClick={() => onChange("windows")}>
+        <MonitorDown aria-hidden="true" />
+        Windows
+      </button>
+    </div>
+  );
+}
+
+function EditionDownload({
+  edition,
+  manifest,
+  platform,
+}: {
+  edition: "official" | "community";
+  manifest: ReleaseManifest | null;
+  platform: Platform;
+}) {
+  const installer = findInstaller(manifest, platform);
+  const isOfficial = edition === "official";
+  const releaseUrl = isOfficial ? officialReleaseUrl : communityReleaseUrl;
+  const version = manifest?.tag ?? "最新稳定版";
+
+  return (
+    <article className={`download-edition ${isOfficial ? "is-official" : "is-community"}`}>
+      <div className="download-edition-copy">
+        <div className="download-edition-title">
+          <h3>Brevyn {isOfficial ? "Official" : "Community"}</h3>
+          <span>{isOfficial ? "推荐" : "开源"}</span>
         </div>
+        <p>{isOfficial ? "官方账号、模型服务与自动更新。" : "本地优先，自行配置 Agent、Embedding、Vision 与 OCR Provider。"}</p>
+      </div>
+
+      <div className="download-specs" aria-live="polite">
+        <span>{version}</span>
+        <span>{platformDetail(platform)}</span>
+        {installer ? <span>{formatFileSize(installer.size)}</span> : null}
+      </div>
+
+      <div className="download-edition-actions">
+        <a
+          className={`button download-edition-primary${isOfficial ? " primary" : ""}`}
+          href={installer?.url ?? releaseUrl}
+          target={installer ? undefined : "_blank"}
+          rel="noopener noreferrer"
+        >
+          <Download className="button-icon" aria-hidden="true" />
+          下载 {isOfficial ? "Official" : "Community"}
+        </a>
+        <a className="download-text-link" href={isOfficial ? releaseUrl : communitySourceUrl} target="_blank" rel="noopener noreferrer">
+          {isOfficial ? <GithubMark /> : <Code2 aria-hidden="true" />}
+          {isOfficial ? "GitHub 备用" : "查看源码"}
+        </a>
+      </div>
+    </article>
+  );
+}
+
+function DownloadSection({
+  catalog,
+  platform,
+  onPlatformChange,
+}: {
+  catalog: ReleaseCatalog;
+  platform: Platform;
+  onPlatformChange: (platform: Platform) => void;
+}) {
+  return (
+    <section className="download-band" id="download">
+      <div className="content download-content">
+        <div className="download-header">
+          <div>
+            <p className="section-kicker">下载</p>
+            <h2 className="section-title">从一门课开始。</h2>
+            <p className="section-text">选择适合你的平台与版本，安装包由 Brevyn 下载节点直接提供。</p>
+          </div>
+          <PlatformSelector platform={platform} onChange={onPlatformChange} />
+        </div>
+
+        <div className="download-editions">
+          <EditionDownload edition="official" manifest={catalog.official} platform={platform} />
+          <EditionDownload edition="community" manifest={catalog.community} platform={platform} />
+        </div>
+
+        <p className="download-footnote">
+          macOS 当前仅支持 Apple Silicon。GitHub Releases 保留为网络异常时的备用下载源。
+        </p>
       </div>
     </section>
   );
@@ -440,16 +613,20 @@ function Footer() {
 
 export default function App() {
   const [contactOpen, setContactOpen] = useState(false);
+  const [platform, setPlatform] = useState<Platform>("macos");
+  const releaseCatalog = useReleaseCatalog();
+
+  useEffect(() => setPlatform(detectPlatform()), []);
 
   return (
     <div className="page">
       <Header contactOpen={contactOpen} setContactOpen={setContactOpen} />
       <main id="top">
-        <Hero pixelPaused={contactOpen} />
+        <Hero pixelPaused={contactOpen} manifest={releaseCatalog.official} platform={platform} />
         <ProductSection />
         <ContextSection />
         <TrustSection />
-        <DownloadSection />
+        <DownloadSection catalog={releaseCatalog} platform={platform} onPlatformChange={setPlatform} />
       </main>
       <Footer />
     </div>
