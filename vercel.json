@@ -1,5 +1,15 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite"
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/api/releases/official",
+      "destination": "https://download.brevyn.org/official/stable/release.json"
+    },
+    {
+      "source": "/api/releases/community",
+      "destination": "https://community-download.brevyn.org/community/stable/release.json"
+    }
+  ]
 }
