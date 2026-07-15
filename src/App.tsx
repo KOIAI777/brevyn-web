@@ -20,6 +20,7 @@ type ReleaseManifest = {
 type ReleaseCatalog = {
   official: ReleaseManifest | null;
   community: ReleaseManifest | null;
+  loading: boolean;
 };
 type ContactAnchor = { x: number; y: number };
 type HeroPixelFieldProps = {
@@ -42,7 +43,7 @@ async function fetchReleaseManifest(url: string, signal: AbortSignal): Promise<R
 }
 
 function useReleaseCatalog(): ReleaseCatalog {
-  const [catalog, setCatalog] = useState<ReleaseCatalog>({ official: null, community: null });
+  const [catalog, setCatalog] = useState<ReleaseCatalog>({ official: null, community: null, loading: true });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -54,6 +55,7 @@ function useReleaseCatalog(): ReleaseCatalog {
       setCatalog({
         official: official.status === "fulfilled" ? official.value : null,
         community: community.status === "fulfilled" ? community.value : null,
+        loading: false,
       });
     });
     return () => controller.abort();
@@ -75,12 +77,12 @@ function formatFileSize(bytes: number): string {
   return `${Math.round(bytes / 1_000_000)} MB`;
 }
 
-function platformLabel(platform: Platform): string {
-  return platform === "macos" ? "macOS" : "Windows";
-}
-
 function platformDetail(platform: Platform): string {
   return platform === "macos" ? "Apple Silicon" : "Windows x64";
+}
+
+function platformDownloadLabel(platform: Platform): string {
+  return platform === "macos" ? "macOS（Apple Silicon）" : "Windows（x64）";
 }
 
 const navLinks = [
@@ -184,17 +186,35 @@ function GithubMark() {
   );
 }
 
-function DownloadButton({ manifest, platform }: { manifest: ReleaseManifest | null; platform: Platform }) {
+function DownloadButton({
+  manifest,
+  platform,
+  loading,
+}: {
+  manifest: ReleaseManifest | null;
+  platform: Platform;
+  loading: boolean;
+}) {
   const installer = findInstaller(manifest, platform);
+  const label = platformDownloadLabel(platform);
+
+  if (!installer) {
+    return (
+      <button className="button primary download-cta" type="button" disabled aria-busy={loading}>
+        <Download className="button-icon" aria-hidden="true" />
+        <span>{loading ? `正在获取 ${label} 下载` : `${label} 下载暂不可用`}</span>
+      </button>
+    );
+  }
+
   return (
     <a
       className="button primary download-cta"
-      href={installer?.url ?? officialReleaseUrl}
-      target={installer ? undefined : "_blank"}
+      href={installer.url}
       rel="noopener noreferrer"
     >
       <Download className="button-icon" aria-hidden="true" />
-      <span>下载 {platformLabel(platform)} 版</span>
+      <span>下载 {label}</span>
     </a>
   );
 }
@@ -338,10 +358,12 @@ function Hero({
   pixelPaused = false,
   manifest,
   platform,
+  loading,
 }: {
   pixelPaused?: boolean;
   manifest: ReleaseManifest | null;
   platform: Platform;
+  loading: boolean;
 }) {
   return (
     <section className="hero" aria-labelledby="hero-title">
@@ -355,7 +377,7 @@ function Hero({
           面向课程资料管理、RAG 检索和作业任务的本地优先 AI 学习工作台。
         </p>
         <div className="hero-actions">
-          <DownloadButton manifest={manifest} platform={platform} />
+          <DownloadButton manifest={manifest} platform={platform} loading={loading} />
           <a className="button" href="#download">
             查看全部版本
           </a>
@@ -517,10 +539,12 @@ function EditionDownload({
   edition,
   manifest,
   platform,
+  loading,
 }: {
   edition: "official" | "community";
   manifest: ReleaseManifest | null;
   platform: Platform;
+  loading: boolean;
 }) {
   const installer = findInstaller(manifest, platform);
   const isOfficial = edition === "official";
@@ -544,15 +568,26 @@ function EditionDownload({
       </div>
 
       <div className="download-edition-actions">
-        <a
-          className={`button download-edition-primary${isOfficial ? " primary" : ""}`}
-          href={installer?.url ?? releaseUrl}
-          target={installer ? undefined : "_blank"}
-          rel="noopener noreferrer"
-        >
-          <Download className="button-icon" aria-hidden="true" />
-          下载 {isOfficial ? "Official" : "Community"}
-        </a>
+        {installer ? (
+          <a
+            className={`button download-edition-primary${isOfficial ? " primary" : ""}`}
+            href={installer.url}
+            rel="noopener noreferrer"
+          >
+            <Download className="button-icon" aria-hidden="true" />
+            下载 {isOfficial ? "Official" : "Community"}{platform === "macos" ? "（Apple Silicon）" : "（x64）"}
+          </a>
+        ) : (
+          <button
+            className={`button download-edition-primary${isOfficial ? " primary" : ""}`}
+            type="button"
+            disabled
+            aria-busy={loading}
+          >
+            <Download className="button-icon" aria-hidden="true" />
+            {loading ? "正在获取下载地址" : "下载地址暂不可用"}
+          </button>
+        )}
         <a className="download-text-link" href={isOfficial ? releaseUrl : communitySourceUrl} target="_blank" rel="noopener noreferrer">
           {isOfficial ? <GithubMark /> : <Code2 aria-hidden="true" />}
           {isOfficial ? "GitHub 备用" : "查看源码"}
@@ -584,8 +619,8 @@ function DownloadSection({
         </div>
 
         <div className="download-editions">
-          <EditionDownload edition="official" manifest={catalog.official} platform={platform} />
-          <EditionDownload edition="community" manifest={catalog.community} platform={platform} />
+          <EditionDownload edition="official" manifest={catalog.official} platform={platform} loading={catalog.loading} />
+          <EditionDownload edition="community" manifest={catalog.community} platform={platform} loading={catalog.loading} />
         </div>
 
         <p className="download-footnote">
@@ -622,7 +657,7 @@ export default function App() {
     <div className="page">
       <Header contactOpen={contactOpen} setContactOpen={setContactOpen} />
       <main id="top">
-        <Hero pixelPaused={contactOpen} manifest={releaseCatalog.official} platform={platform} />
+        <Hero pixelPaused={contactOpen} manifest={releaseCatalog.official} platform={platform} loading={releaseCatalog.loading} />
         <ProductSection />
         <ContextSection />
         <TrustSection />
