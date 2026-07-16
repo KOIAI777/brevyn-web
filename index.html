@@ -6,13 +6,114 @@
     <title>Brevyn - 面向课程、资料和作业任务的本地优先 AI 学习工作台</title>
     <meta
       name="description"
-      content="Brevyn 是面向课程、资料、文件检索和作业任务的本地优先桌面 AI 学习工作台。"
+      content="Brevyn 是面向大学课程与作业的本地优先 AI 学习工作台，支持 Office/PDF 预览、课程资料 RAG 检索、来源引用和 Agent 任务会话。"
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#f7f4ed" />
+    <link rel="canonical" href="https://www.brevyn.org/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:site_name" content="Brevyn" />
+    <meta property="og:title" content="Brevyn - 本地优先的 AI 学习工作台" />
+    <meta
+      property="og:description"
+      content="管理课程资料、检索和引用来源、预览 Office/PDF 文件，并在同一个桌面工作区完成作业任务。"
+    />
+    <meta property="og:url" content="https://www.brevyn.org/" />
+    <meta property="og:image" content="https://www.brevyn.org/assets/generated/brevyn-social-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Brevyn 桌面学习工作区界面" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Brevyn - 本地优先的 AI 学习工作台" />
+    <meta
+      name="twitter:description"
+      content="管理课程资料、检索来源、预览 Office/PDF 文件并完成作业任务。"
+    />
+    <meta name="twitter:image" content="https://www.brevyn.org/assets/generated/brevyn-social-card.png" />
+    <link
+      rel="preload"
+      as="image"
+      href="/assets/generated/brevyn-window-800.webp"
+      imagesrcset="/assets/generated/brevyn-window-800.webp 800w, /assets/generated/brevyn-window-1600.webp 1600w"
+      imagesizes="(max-width: 760px) 100vw, 1180px"
+      fetchpriority="high"
     />
     <link rel="icon" type="image/png" href="/assets/generated/brevyn-app-icon.png" />
     <link rel="apple-touch-icon" href="/assets/generated/brevyn-app-icon.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://www.brevyn.org/#website",
+            "url": "https://www.brevyn.org/",
+            "name": "Brevyn",
+            "inLanguage": "zh-CN"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://www.brevyn.org/#software",
+            "name": "Brevyn",
+            "url": "https://www.brevyn.org/",
+            "description": "面向课程资料管理、知识检索和作业任务的本地优先桌面 AI 学习工作台。",
+            "applicationCategory": "EducationalApplication",
+            "applicationSubCategory": "AI learning workspace",
+            "operatingSystem": "macOS, Windows",
+            "image": "https://www.brevyn.org/assets/generated/brevyn-social-card.png",
+            "downloadUrl": "https://www.brevyn.org/#download",
+            "sameAs": ["https://github.com/KOIAI777/brevyn"]
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="page">
+        <main id="top">
+          <section class="hero" aria-labelledby="static-hero-title">
+            <div class="hero-inner">
+              <div class="hero-app-icon" aria-hidden="true">
+                <img src="/assets/generated/brevyn-app-icon-256.webp" width="256" height="256" alt="" />
+              </div>
+              <h1 id="static-hero-title">Brevyn</h1>
+              <p class="hero-copy">面向课程资料管理、RAG 检索和作业任务的本地优先 AI 学习工作台。</p>
+              <div class="hero-actions">
+                <a class="button primary download-cta" href="https://github.com/KOIAI777/brevyn-releases/releases/latest">下载 Brevyn</a>
+                <a class="button" href="https://github.com/KOIAI777/brevyn">查看 Community 源码</a>
+              </div>
+              <div class="meta-row" aria-label="产品亮点">
+                <span>本地优先桌面工作区</span>
+                <span>课程资料 RAG 检索</span>
+                <span>面向任务的 Agent 会话</span>
+              </div>
+            </div>
+            <div class="hero-window-wrap">
+              <div class="window">
+                <img
+                  src="/assets/generated/brevyn-window-800.webp"
+                  srcset="/assets/generated/brevyn-window-800.webp 800w, /assets/generated/brevyn-window-1600.webp 1600w"
+                  sizes="(max-width: 760px) 100vw, 1180px"
+                  width="3104"
+                  height="2064"
+                  alt="Brevyn 桌面应用的课程工作区界面"
+                />
+              </div>
+            </div>
+          </section>
+          <section class="band">
+            <div class="content">
+              <h2 class="section-title">把课程资料转成可检索、可引用的学习上下文。</h2>
+              <p class="section-text">统一管理 PDF、PPTX、DOCX、XLSX 与图片资料，并从回答返回原始文件中的证据位置。</p>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
