@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Apple, Code2, Download, MonitorDown } from "lucide-react";
-import { LanyardContact } from "./components/LanyardContact";
-import PixelBlast from "./components/PixelBlast/PixelBlast";
 import "./styles.css";
+
+const PixelBlast = lazy(() => import("./components/PixelBlast/PixelBlast"));
+const loadLanyardContact = () => import("./components/LanyardContact")
+  .then(({ LanyardContact }) => ({ default: LanyardContact }));
+const LanyardContact = lazy(loadLanyardContact);
 
 const officialReleaseUrl = "https://github.com/KOIAI777/brevyn-releases/releases/latest";
 const communityReleaseUrl = "https://github.com/KOIAI777/brevyn/releases/latest";
@@ -25,6 +28,12 @@ type ReleaseCatalog = {
 type ContactAnchor = { x: number; y: number };
 type HeroPixelFieldProps = {
   paused?: boolean;
+};
+type ProductImageProps = {
+  name: string;
+  alt: string;
+  sizes: string;
+  priority?: boolean;
 };
 
 function isReleaseManifest(value: unknown): value is ReleaseManifest {
@@ -85,6 +94,22 @@ function platformDownloadLabel(platform: Platform): string {
   return platform === "macos" ? "macOS（Apple Silicon）" : "Windows（x64）";
 }
 
+function ProductImage({ name, alt, sizes, priority = false }: ProductImageProps) {
+  return (
+    <img
+      src={`/assets/generated/${name}-800.webp`}
+      srcSet={`/assets/generated/${name}-800.webp 800w, /assets/generated/${name}-1600.webp 1600w`}
+      sizes={sizes}
+      width="3104"
+      height="2064"
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : "auto"}
+      decoding="async"
+      alt={alt}
+    />
+  );
+}
+
 const navLinks = [
   { href: "#product", label: "产品" },
   { href: "#context", label: "上下文" },
@@ -139,28 +164,28 @@ const features = [
 
 const demoCards = [
   {
-    src: "/assets/generated/actual-workspace-files.png",
+    image: "actual-workspace-files",
     alt: "Brevyn 实机工作区截图，左侧显示课程列表，中间是学期会话，右侧显示会话文件和课程文件树。",
     title: "文件栏与会话上下文",
     body: "会话文件、课程文件和学期资料在右侧 rail 中展开，适合检查当前 Agent 能看到哪些上下文。",
     tags: ["会话文件", "课程文件树", "学期资料"],
   },
   {
-    src: "/assets/generated/actual-workspace-sources.png",
+    image: "actual-workspace-sources",
     alt: "Brevyn 实机工作区截图，右侧来源面板展示当前范围、学期资料、课程资料和待索引状态。",
     title: "来源范围与索引状态",
     body: "来源面板区分学期资料和本学期课程资料，清楚显示当前范围、文件数量和待索引状态。",
     tags: ["来源面板", "范围控制", "索引状态"],
   },
   {
-    src: "/assets/generated/course-create.png",
+    image: "course-create",
     alt: "Brevyn 我的课程弹层，展示课程列表、学期资料和添加课程表单。",
     title: "课程创建",
     body: "课程名称、代码、教师和资料会进入同一个课程空间，后续索引、检索和 Agent 会话都围绕这个空间展开。",
     tags: ["课程空间", "资料归档", "本地索引", "RAG 上下文"],
   },
   {
-    src: "/assets/generated/brevyn-window.png",
+    image: "brevyn-window",
     alt: "Brevyn 任务工作区界面。",
     title: "任务工作区",
     body: "为 essay、exam 和 project 创建独立工作区，把课程资料、文件证据和 AI 会话放在同一个任务里。",
@@ -231,23 +256,25 @@ function MailIcon() {
 function HeroPixelField({ paused = false }: HeroPixelFieldProps) {
   return (
     <div className={`hero-pixel-field${paused ? " is-paused" : ""}`} aria-hidden="true">
-      <PixelBlast
-        variant="square"
-        color="#d18a5b"
-        pixelSize={2}
-        patternScale={4}
-        patternDensity={1.45}
-        pixelSizeJitter={1.3}
-        speed={paused ? 0 : 1.5}
-        edgeFade={0.25}
-        enableRipples
-        rippleSpeed={0.3}
-        rippleThickness={0.1}
-        rippleIntensityScale={1}
-        transparent
-        autoPauseOffscreen
-        globalPointer
-      />
+      <Suspense fallback={null}>
+        <PixelBlast
+          variant="square"
+          color="#d18a5b"
+          pixelSize={2}
+          patternScale={4}
+          patternDensity={1.45}
+          pixelSizeJitter={1.3}
+          speed={paused ? 0 : 1.5}
+          edgeFade={0.25}
+          enableRipples
+          rippleSpeed={0.3}
+          rippleThickness={0.1}
+          rippleIntensityScale={1}
+          transparent
+          autoPauseOffscreen
+          globalPointer
+        />
+      </Suspense>
     </div>
   );
 }
@@ -270,8 +297,6 @@ function Header({ contactOpen, setContactOpen }: { contactOpen: boolean; setCont
 
   useEffect(() => {
     updateContactAnchor();
-    const timer = window.setTimeout(() => setContactMounted(true), 700);
-    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -294,7 +319,7 @@ function Header({ contactOpen, setContactOpen }: { contactOpen: boolean; setCont
     <header className="nav">
       <div className="nav-inner" ref={navInnerRef}>
         <a className="brand" href="#top" aria-label="Brevyn 首页">
-          <img src="/assets/generated/brevyn-app-icon.png" alt="" />
+          <img src="/assets/generated/brevyn-app-icon-256.webp" width="256" height="256" alt="" />
           <span className="brand-mark">
             <span>Brevyn</span>
             <span>学习工作台</span>
@@ -315,6 +340,8 @@ function Header({ contactOpen, setContactOpen }: { contactOpen: boolean; setCont
             aria-label={contactOpen ? "收起联系牌" : "打开联系牌"}
             aria-expanded={contactOpen}
             aria-controls="contact-lanyard"
+            onPointerEnter={() => void loadLanyardContact()}
+            onFocus={() => void loadLanyardContact()}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -347,7 +374,9 @@ function Header({ contactOpen, setContactOpen }: { contactOpen: boolean; setCont
       </div>
       {contactMounted ? (
         <div className={`contact-lanyard-layer${contactOpen ? " is-open" : ""}`} id="contact-lanyard" aria-hidden={!contactOpen}>
-          <LanyardContact active={contactOpen} anchor={contactAnchor} />
+          <Suspense fallback={null}>
+            <LanyardContact active={contactOpen} anchor={contactAnchor} />
+          </Suspense>
         </div>
       ) : null}
     </header>
@@ -370,7 +399,7 @@ function Hero({
       <HeroPixelField paused={pixelPaused} />
       <div className="hero-inner">
         <div className="hero-app-icon" aria-hidden="true">
-          <img src="/assets/generated/brevyn-app-icon.png" alt="" />
+          <img src="/assets/generated/brevyn-app-icon-256.webp" width="256" height="256" alt="" />
         </div>
         <h1 id="hero-title">Brevyn</h1>
         <p className="hero-copy">
@@ -397,7 +426,12 @@ function Hero({
       <div className="hero-window-wrap">
         <div className="halo" aria-hidden="true" />
         <div className="window">
-          <img src="/assets/generated/brevyn-window.png" alt="Brevyn 桌面应用，展示学期工作区、课程列表和仪表盘面板。" />
+          <ProductImage
+            name="brevyn-window"
+            sizes="(max-width: 760px) 100vw, 1180px"
+            priority
+            alt="Brevyn 桌面应用，展示学期工作区、课程列表和仪表盘面板。"
+          />
         </div>
       </div>
     </section>
@@ -432,7 +466,11 @@ function ProductSection() {
             </div>
           </div>
           <div className="shot-frame">
-            <img src="/assets/generated/brevyn-window.png" alt="Brevyn 创建学期并组织学习任务的引导界面。" />
+            <ProductImage
+              name="brevyn-window"
+              sizes="(max-width: 880px) 100vw, 50vw"
+              alt="Brevyn 创建学期并组织学习任务的引导界面。"
+            />
           </div>
         </div>
 
@@ -478,7 +516,7 @@ function ContextSection() {
         <div className="demo-strip" aria-label="Brevyn 产品界面截图">
           {demoCards.map((card) => (
             <article className="demo-card" key={card.title}>
-              <img src={card.src} alt={card.alt} />
+              <ProductImage name={card.image} sizes="(max-width: 880px) 100vw, 50vw" alt={card.alt} />
               <div className="demo-caption">
                 <strong>{card.title}</strong>
                 <span>{card.body}</span>
